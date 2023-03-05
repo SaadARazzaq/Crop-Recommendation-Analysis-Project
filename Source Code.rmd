@@ -1,0 +1,274 @@
+---
+title: "CROP RECOMMENDATION"
+output:
+  flexdashboard::flex_dashboard
+runtime: shiny
+---
+
+# Table
+
+```{r}
+library(DT)
+startData <- read.csv("Crop_recommendation.csv")
+DT::datatable(startData)
+```
+
+
+# Analysis
+
+## Column {.sidebar}
+
+```{r}
+
+
+  output$summary1 <- renderPrint({
+    if(input$datalist=="All"){
+      myVec2=c()
+      val <- 2
+      while(val <= row_num){
+        myVec2 <- append(myVec2,mean(t(data_origin[val,])))
+        val<-val+1
+      }
+      summary(myVec2)
+    }
+    else{
+      label <- input$datalist
+      rows <- length(t(data_origin[,2]))
+      summary(data_origin[2:rows,label])
+    }
+  })
+  
+  
+  output$standD <- renderText({
+    if(input$datalist=="All"){
+      myVec2=c()
+      val <- 2
+      while(val <= row_num){
+        myVec2 <- append(myVec2,mean(t(data_origin[val,])))
+        val<-val+1
+      }
+      c("Standard Deviation: ",sd(myVec2))
+    }
+    else{
+      label <-input$datalist
+      rows <- length(t(data_origin[,2]))
+      c("Standard Deviation: ",sd(data_origin[2:rows,label]))
+    }
+  })
+  
+output$IQR <- renderText({
+    if(input$datalist=="All"){
+      myVec2=c()
+      val <- 2
+      while(val <= row_num){
+        myVec2 <- append(myVec2,mean(t(data_origin[val,])))
+        val<-val+1
+      }
+      c("IQR: ",IQR(myVec2))
+    }
+    else{
+      label <-input$datalist
+      rows <- length(t(data_origin[,2]))
+      c("IQR: ",IQR(data_origin[2:rows,label]))
+    }
+  })
+data <- read.csv("Crop_recommendation.csv")
+data_origin <- subset(data, select = -c(8,8))
+selectInput("datalist", "Choose a column:", c(rownames(t(data_origin))))
+```
+## Column
+
+```{r}
+column(8, verbatimTextOutput("minval"))
+column(8, verbatimTextOutput("maxval"))
+column(8, verbatimTextOutput("summary1"))
+column(8, verbatimTextOutput("standD"))
+column(8, verbatimTextOutput("IQR"))
+```
+
+
+# Regression Analysis
+## ph~Rainfall
+Regression analysis of "rainfall" with "ph"
+```{r}
+
+library(datasets)
+mydata=as.data.frame(read.csv("Crop_recommendation.csv"))
+colnames(mydata)=c("N", "P", "K", "temperature", "humidity", "ph", "rainfall")
+model1=lm(ph~rainfall, data=mydata)
+plot(ph~rainfall, data=mydata,
+      xlab="rainfall", ylab="ph")
+abline(model1)
+```
+
+## ph~humidity
+Regression analysis of "Humidity" with "ph"
+```{r}
+
+library(datasets)
+mydata=as.data.frame(read.csv("Crop_recommendation.csv"))
+colnames(mydata)=c("N", "P", "K", "temperature", "humidity", "ph", "rainfall")
+model1=lm(ph~humidity, data=mydata)
+plot(ph~humidity, data=mydata,
+      xlab="humidity", ylab="ph")
+abline(model1)
+```
+
+## N~ph
+Regression analysis of "ph" with "N"
+```{r}
+
+library(datasets)
+mydata=as.data.frame(read.csv("Crop_recommendation.csv"))
+colnames(mydata)=c("N", "P", "K", "temperature", "humidity", "ph", "rainfall")
+model1=lm(N~ph, data=mydata)
+plot(N~ph, data=mydata,
+      xlab="ph", ylab="N")
+abline(model1)
+```
+
+## P~ph
+Regression analysis of "ph" with "P"
+```{r}
+
+library(datasets)
+mydata=as.data.frame(read.csv("Crop_recommendation.csv"))
+colnames(mydata)=c("N", "P", "K", "temperature", "humidity", "ph", "rainfall")
+model1=lm(P~ph, data=mydata)
+plot(P~ph, data=mydata,
+      xlab="ph", ylab="P")
+abline(model1)
+```
+
+## K~ph
+Regression analysis of "ph" with "K"
+```{r}
+
+library(datasets)
+mydata=as.data.frame(read.csv("Crop_recommendation.csv"))
+colnames(mydata)=c("N", "P", "K", "temperature", "humidity", "ph", "rainfall")
+model1=lm(K~ph, data=mydata)
+plot(K~ph, data=mydata,
+      xlab="ph", ylab="K")
+abline(model1)
+```
+
+
+
+
+# Histogram
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(DT)
+startData <- read.csv("Crop_recommendation.csv")
+updateData <- reactive(
+startData %>% group_by(!!! rlang::syms(input$GB)) %>%
+summarise_if(is.numeric,sum,na.rm=T))
+```
+
+## Column {.sidebar}
+
+```{r}
+selectInput(inputId = "GB",label= "Group By", choices = names(startData))
+selectInput(inputId = "Metric",label= "Metric", choices = 
+names (select_if(startData, is.numeric)))
+```
+
+## Column
+
+### Histogram
+
+```{r}
+renderPlot({
+  updateData()%>% 
+    ggplot(aes(x=!! rlang::sym(input$GB),y=!! rlang::sym(input$Metric),fill=!!
+rlang::sym(input$GB))) +
+    geom_col()
+})
+```
+
+### Table
+
+```{r}
+renderDT(
+  updateData(), rownames = F, extensions = 'Buttons', filter="top", editable=T,
+  options = list(
+    dom = 'Blfrtip',
+    buttons = c('copy', 'csv', 'excel', 'pdf', 'print'),
+    lengthMenu = list(c(10,50, 100, -1), c(10,50, 100, "All"))
+  )
+)
+```
+
+
+# Edit Table
+
+
+```{r}
+library(DT)
+startData <- read.csv("Crop_recommendation.csv", header = TRUE, sep = ",")
+DT::datatable(startData)
+var1 <- renderDT(
+  updateData(), rownames = F, extensions = 'Buttons', filter="top", editable=T,
+  options = list(
+    dom = 'Blfrtip',
+    buttons = c('Insert', 'Delete'),
+    lengthMenu = list(c(10,50), c(10,50))
+  )
+)
+edit(startData)
+```
+
+
+# Distributions
+
+```{r}
+library(tidyverse)
+library(DT)
+sData <- read.csv("Crop_recommendation.csv")
+uData <- reactive(
+sData %>% group_by(!!! rlang::syms(input$GB)) %>%
+summarise_if(is.numeric,sum,na.rm=T))
+```
+
+## Column {.sidebar}
+
+```{r}
+selectInput("Distributions", "Select a Distribution type", choices = c("Normal", "Uniform"))
+sliderInput("sampleSize","Select a sample size", min = 0, max = 300, value= 270, step= 0)
+conditionalPanel(condition = "input.Distribution == 'Normal'", textInput("Mean", "Please Select Mean", 10), textInput("sd", "Please Select Standard Deviation"))
+conditionalPanel(condition = "input.Distribution == 'Uniform'", textInput("u1","Val1: ", value = 1), textInput("u2","Val2: ", value = 1))
+server <- function(input, output, session){
+output$myPlot <- renderPlot({
+distType <- input$Distribution 
+size <- input$sampleSize
+if(distType == "Normal"){
+randomVec <- rnorm(size, mean = as.numeric(input$mean), sd=as.numeric(input$sd))
+}
+else{
+  randomVec <- runif(size, min = 0, max = 300)
+}
+hist(randomVec, col="blue")})}
+```
+
+## Column
+
+### Distribution Plot
+
+```{r}
+plotOutput("myPlot")
+```
+### Table
+
+```{r}
+renderDT(
+  updateData(), rownames = F, extensions = 'Buttons', filter="top", editable=T,
+  options = list(
+    dom = 'Blfrtip',
+    buttons = c('copy', 'csv', 'excel', 'pdf', 'print'),
+    lengthMenu = list(c(10,50, 100, -1), c(10,50, 100, "All"))
+  )
+)
+```
+
